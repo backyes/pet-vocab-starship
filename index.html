@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#04101a" />
+  <meta name="description" content="PET 词汇星舰：3283 个剑桥 PET 核心词条，12 个 3D 星域，射击识词、听写填空、例句组句，手机可玩。" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>PET 词汇星舰 · Lexicon Starship</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="scene" aria-hidden="true"><canvas id="canvas"></canvas></div>
+  <div class="scene-bg" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div id="warp" class="warp" aria-hidden="true"><div></div></div>
+
+  <!-- 启动屏 -->
+  <section id="boot" class="screen boot">
+    <div class="boot-grid">
+      <div class="boot-mark">
+        <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
+        <div class="core-mark">PET</div>
+      </div>
+      <p class="eyebrow">CAMBRIDGE B1 · LEXICON STARSHIP</p>
+      <h1 class="boot-title">词汇星舰</h1>
+      <p class="boot-sub">3,283 个 PET 词表词条 · 1,579 个新增核心<br />默认剔除 KET 基础词，专注 B1 新增词汇与语境。</p>
+      <div class="boot-stats">
+        <span><b id="boot-total">3,283</b> 词条</span>
+        <span><b>1,579</b> PET 新增</span>
+        <span><b>12</b> 星域</span>
+      </div>
+      <button id="btn-boot" class="btn btn-primary btn-xl">启动星舰 <span>→</span></button>
+      <p id="boot-loading" class="boot-loading">正在校准词库…</p>
+      <p class="boot-tip">建议戴上耳机 · 手机横竖屏均可 · 首次启动会解锁音频</p>
+    </div>
+    <div class="credits-line">单词音频与例句内容：Turtle Bay PET / KET Flashcards (CC BY-NC 4.0)</div>
+  </section>
+
+  <!-- 基地 -->
+  <section id="home" class="screen home hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div><b>PET 词汇星舰</b><span>LEXICON STARSHIP // B1</span></div>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn" data-open="library"><span>▤</span>词库</button>
+        <button class="nav-btn" data-open="profile"><span>◈</span>升级</button>
+        <button class="nav-btn" data-open="achievements"><span>✦</span>成就</button>
+        <button id="btn-sound" class="nav-btn icon-btn" aria-label="音效开关">♪</button>
+      </nav>
+    </header>
+
+    <main class="home-grid">
+      <section class="hero">
+        <p class="eyebrow">B1 PRELIMINARY · 3,283 ENTRIES · 12 SECTORS</p>
+        <h1 class="hero-title">词汇<span>星舰</span></h1>
+        <p class="hero-sub">1,579 个 PET 新增核心词，12 个 3D 星域。<br />默认剔除 KET 已学词；需要打基础时可进入「基础复习」。</p>
+        <div class="hero-actions">
+          <button id="btn-continue" class="btn btn-primary">继续任务 <span id="continue-label">01 · 生活环舱</span></button>
+          <button id="btn-map" class="btn btn-ghost">星系地图</button>
+        </div>
+        <div id="home-pilot" class="pilot-card">
+          <div class="pilot-avatar"><span>7</span></div>
+          <div class="pilot-info">
+            <div class="pilot-line"><b id="pilot-name">NOVA-0000</b><span id="pilot-rank" class="rank-chip">见习学员</span></div>
+            <div class="xp-track"><i id="pilot-xp"></i></div>
+            <div class="pilot-meta"><span id="pilot-level">LV.1</span><span id="pilot-xptext">0 / 140 XP</span><span id="pilot-mastered">0 词已掌握</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mission-panel panel">
+        <div class="panel-head"><div><p class="eyebrow">MISSION TERMINAL</p><h2>作战终端</h2></div><span id="home-sectors" class="mini-stat">0 / 12 星域</span></div>
+        <button id="mode-campaign" class="mode-card campaign-card">
+          <div class="mode-index">01</div>
+          <div class="mode-copy"><b>闯关战役</b><span>混合射击 · 听写 · 组句 · 词王 BOSS</span></div>
+          <div class="mode-go">进入 <span>→</span></div>
+        </button>
+        <div class="mode-grid">
+          <button class="mode-card small" data-mode="sprint"><b>限时突围</b><span>90 秒 · 连击加分</span><i>02</i></button>
+          <button class="mode-card small" data-mode="dictation"><b>听写舱</b><span>听音 · 填 30% 字母</span><i>03</i></button>
+          <button class="mode-card small" data-mode="sentence"><b>组句舱</b><span>打乱词块 · 重组例句</span><i>04</i></button>
+          <button class="mode-card small" data-mode="cloze"><b>语境舱</b><span>例句填空 · 固定搭配</span><i>05</i></button>
+          <button class="mode-card small" data-mode="review"><b>错词回收</b><span>薄弱词 · 遗忘曲线</span><i>06</i></button>
+          <button class="mode-card small" data-mode="foundation"><b>基础复习</b><span>KET 基础词 · 可选</span><i>07</i></button>
+        </div>
+        <div class="next-reward">
+          <span class="reward-dot"></span>
+          <div><b>每日目标</b><span id="daily-goal">完成 1 次任务 · 掌握 10 个新词</span></div>
+          <span id="daily-count" class="mini-stat">0/10</span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="home-footer">
+      <span>点击目标锁定 · 数字键 1–4 开火 · Esc 暂停</span>
+      <span>手机：轻触目标 / 词块，听写时使用键盘输入</span>
+    </footer>
+  </section>
+
+  <!-- 游戏 HUD -->
+  <section id="hud" class="hud hidden">
+    <div class="hud-top">
+      <div class="hud-left">
+        <button id="btn-pause" class="hud-icon" aria-label="暂停">Ⅱ</button>
+        <div class="hud-mode"><span id="hud-sector">SECTOR 01</span><b id="hud-mode-name">生活环舱</b></div>
+      </div>
+      <div class="hud-center">
+        <div id="progress-dots" class="progress-dots"></div>
+        <div id="boss-bar" class="boss-bar hidden"><span>词王核心 // WORDEN</span><div class="boss-track"><i></i></div></div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-score"><span>SCORE</span><b id="hud-score">0</b></div>
+        <div id="hud-shields" class="shields" aria-label="护盾"></div>
+        <button id="btn-hint" class="hud-icon hint-btn" aria-label="提示">?<span id="hint-count">3</span></button>
+      </div>
+    </div>
+
+    <div id="prompt" class="prompt-card">
+      <div class="prompt-head"><span id="prompt-kicker">意义锁定</span><span id="prompt-pos" class="pos-chip">n.</span></div>
+      <div id="prompt-main" class="prompt-main">选择正确英文</div>
+      <div id="prompt-sub" class="prompt-sub">点击场景中的目标晶体，或按数字键 1–4</div>
+      <div id="prompt-extra" class="prompt-extra hidden"></div>
+      <div class="timer-track"><i id="timer-fill"></i></div>
+    </div>
+
+    <div id="feedback" class="feedback hidden"><b id="feedback-title"></b><span id="feedback-body"></span></div>
+
+    <!-- 听写控制台 -->
+    <div id="console-dictation" class="console dictation hidden">
+      <div class="console-head">
+        <span class="console-label">AUDIO DECODE // 听写解码</span>
+        <div class="audio-controls">
+          <button id="btn-replay" class="chip-btn">▶ 重听</button>
+          <button id="btn-slow" class="chip-btn">0.8×</button>
+        </div>
+      </div>
+      <div id="dictation-slots" class="slots" aria-label="填入缺失字母"></div>
+      <div class="console-actions">
+        <span class="console-hint">Enter 检查 · 空格重听</span>
+        <button id="btn-check-dictation" class="btn btn-primary btn-sm">检查</button>
+      </div>
+    </div>
+
+    <!-- 组句控制台 -->
+    <div id="console-sentence" class="console sentence hidden">
+      <div class="console-head">
+        <span class="console-label">SYNTAX FORGE // 语序重构</span>
+        <span id="sentence-target" class="sentence-target"></span>
+      </div>
+      <div id="sentence-line" class="sentence-line"><span class="sentence-placeholder">按顺序点击下方词块…</span></div>
+      <div id="chip-bank" class="chip-bank"></div>
+      <div class="console-actions">
+        <div class="sentence-tools">
+          <button id="btn-undo" class="chip-btn">撤销</button>
+          <button id="btn-reset-sentence" class="chip-btn">重置</button>
+          <button id="btn-hint-sentence" class="chip-btn">提示</button>
+        </div>
+        <button id="btn-check-sentence" class="btn btn-primary btn-sm">检查语序</button>
+      </div>
+    </div>
+
+    <div id="combo" class="combo"><span>COMBO</span><b>0</b><div class="combo-track"><i></i></div></div>
+    <div id="score-pop" class="score-pop"></div>
+    <div id="node-toast" class="node-toast"></div>
+    <div class="hud-footer">
+      <span id="hud-tip">锁定正确英文</span>
+      <span id="hud-streak">STREAK 0</span>
+    </div>
+    <div id="flash" class="flash"></div>
+  </section>
+
+  <!-- 星系地图 -->
+  <div id="overlay-map" class="overlay hidden">
+    <div class="overlay-shell map-shell">
+      <header class="overlay-head">
+        <div><p class="eyebrow">SECTOR SELECT</p><h2>星系地图</h2></div>
+        <button class="btn btn-ghost btn-sm" data-close="map">关闭 ×</button>
+      </header>
+      <div class="map-layout">
+        <div id="sector-grid" class="sector-grid"></div>
+        <aside id="sector-detail" class="sector-detail panel"></aside>
+      </div>
+      <div id="sector-launch-bar" class="sector-launch-bar">
+        <div class="launch-copy"><b id="launch-name">生活环舱</b><span id="launch-meta">205 词 · 0 星</span></div>
+        <button id="btn-launch-mobile" class="btn btn-primary">启航 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 词库 -->
+  <div id="overlay-library" class="overlay hidden">
+    <div class="overlay-shell library-shell">
+      <header class="overlay-head">
+        <div><p class="eyebrow">LEXICON ARCHIVE</p><h2>词库 <span id="library-count" class="head-count"></span></h2></div>
+        <button class="btn btn-ghost btn-sm" data-close="library">关闭 ×</button>
+      </header>
+      <div class="library-tools">
+        <input id="library-search" class="input" type="search" placeholder="搜索单词或中文释义…" autocomplete="off" />
+        <select id="library-theme" class="input select"></select>
+        <select id="library-filter" class="input select">
+          <option value="pet">PET 新增（默认）</option>
+          <option value="all">全部词条</option>
+          <option value="wrong">我的错词</option>
+          <option value="new">未学习</option>
+          <option value="mastered">已掌握</option>
+          <option value="ket">KET 基础词（可选）</option>
+        </select>
+      </div>
+      <div id="library-grid" class="library-grid"></div>
+      <div class="library-foot"><span id="library-page-info"></span><div class="pager"><button id="lib-prev" class="btn btn-ghost btn-sm">上一页</button><button id="lib-next" class="btn btn-ghost btn-sm">下一页</button></div></div>
+    </div>
+  </div>
+
+  <!-- 个人 ID / 升级 -->
+  <div id="overlay-profile" class="overlay hidden">
+    <div class="overlay-shell profile-shell">
+      <header class="overlay-head">
+        <div><p class="eyebrow">PILOT PROFILE</p><h2>舰员档案</h2></div>
+        <button class="btn btn-ghost btn-sm" data-close="profile">关闭 ×</button>
+      </header>
+      <div class="profile-layout">
+        <section id="profile-card" class="profile-card panel"></section>
+        <section class="upgrade-panel panel">
+          <div class="panel-head"><div><p class="eyebrow">MODULES</p><h3>舰载模块</h3></div><span id="points-badge" class="points-badge">0 模块点</span></div>
+          <div id="upgrade-list" class="upgrade-list"></div>
+        </section>
+      </div>
+      <section class="achievement-strip panel">
+        <div class="panel-head"><div><p class="eyebrow">ACHIEVEMENTS</p><h3>成就</h3></div><span id="achievement-count" class="mini-stat"></span></div>
+        <div id="achievement-list" class="achievement-list"></div>
+      </section>
+      <section class="settings-strip panel">
+        <div class="setting-row"><span>音效</span><button id="toggle-sfx" class="toggle on">ON</button></div>
+        <div class="setting-row"><span>单词发音</span><button id="toggle-voice" class="toggle on">ON</button></div>
+        <div class="setting-row"><span>镜头动效</span><button id="toggle-motion" class="toggle on">ON</button></div>
+        <div class="setting-row danger"><span>重置进度</span><button id="btn-reset" class="btn btn-ghost btn-sm">重置</button></div>
+      </section>
+      <p class="license-note">词汇内容来自 Cambridge B1 Preliminary 词表与 Turtle Bay PET/KET Flashcards（CC BY-NC 4.0），仅用于非商业学习。</p>
+    </div>
+  </div>
+
+  <!-- 成就 -->
+  <div id="overlay-achievements" class="overlay hidden">
+    <div class="overlay-shell achievements-shell">
+      <header class="overlay-head">
+        <div><p class="eyebrow">HONOURS</p><h2>舰员成就</h2></div>
+        <button class="btn btn-ghost btn-sm" data-close="achievements">关闭 ×</button>
+      </header>
+      <div id="achievement-grid" class="achievement-grid"></div>
+    </div>
+  </div>
+
+  <!-- 暂停 -->
+  <div id="overlay-pause" class="overlay hidden">
+    <div class="overlay-shell pause-shell">
+      <p class="eyebrow">PAUSED</p><h2>任务暂停</h2>
+      <div class="pause-stats" id="pause-stats"></div>
+      <button id="btn-resume" class="btn btn-primary btn-xl">继续任务</button>
+      <div class="pause-grid">
+        <button id="btn-restart" class="btn btn-ghost">重新开始</button>
+        <button id="btn-pause-library" class="btn btn-ghost">查看词库</button>
+        <button id="btn-pause-sound" class="btn btn-ghost">音效：ON</button>
+        <button id="btn-quit" class="btn btn-ghost">返回基地</button>
+      </div>
+      <p class="pause-tip">提示：答错会消耗护盾；组句可以慢慢来，不计时。</p>
+    </div>
+  </div>
+
+  <!-- 结算 -->
+  <div id="overlay-result" class="overlay hidden">
+    <div class="overlay-shell result-shell">
+      <div id="result-banner" class="result-banner"></div>
+      <div class="result-grid">
+        <section class="result-main">
+          <p class="eyebrow" id="result-kicker">MISSION COMPLETE</p>
+          <h2 id="result-title">星域已净化</h2>
+          <div id="result-stars" class="result-stars"></div>
+          <div class="result-score"><span>SCORE</span><b id="result-score">0</b></div>
+          <div class="result-stats" id="result-stats"></div>
+          <div class="result-levelup hidden" id="result-levelup"></div>
+          <div class="result-actions">
+            <button id="btn-result-primary" class="btn btn-primary btn-xl">下一星域 →</button>
+            <button id="btn-result-retry" class="btn btn-ghost">再来一次</button>
+            <button id="btn-result-home" class="btn btn-ghost">返回基地</button>
+          </div>
+        </section>
+        <aside class="result-side panel">
+          <div class="panel-head"><div><p class="eyebrow">NEEDS REVIEW</p><h3>需要复习</h3></div><span id="result-wrong-count" class="mini-stat"></span></div>
+          <div id="result-wrong-list" class="wrong-list"></div>
+        </aside>
+      </div>
+      <div id="result-achievements" class="result-achievements hidden"></div>
+    </div>
+  </div>
+
+  <div id="toast-stack" class="toast-stack"></div>
+  <div id="levelup-toast" class="levelup-toast hidden"></div>
+  <div id="rotate-tip" class="rotate-tip">横屏或竖屏都可以游玩 · 轻触目标开火</div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
