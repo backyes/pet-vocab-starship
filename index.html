@@ -65,6 +65,7 @@
         <div class="hero-actions">
           <button id="btn-continue" class="btn btn-primary">继续任务 <span id="continue-label">01 · 生活环舱</span></button>
           <button id="btn-map" class="btn btn-ghost">星系地图</button>
+          <button id="btn-learn" class="btn btn-ghost">学习舱</button>
         </div>
         <div id="home-pilot" class="pilot-card">
           <div class="pilot-avatar"><span>7</span></div>
@@ -80,7 +81,7 @@
         <div class="panel-head"><div><p class="eyebrow">MISSION TERMINAL</p><h2>作战终端</h2></div><span id="home-sectors" class="mini-stat">0 / 12 星域</span></div>
         <button id="mode-campaign" class="mode-card campaign-card">
           <div class="mode-index">01</div>
-          <div class="mode-copy"><b>闯关战役</b><span>混合射击 · 听写 · 组句 · 词王 BOSS</span></div>
+          <div class="mode-copy"><b>闯关战役</b><span>战前学习 6 词 · 混合射击 · 词王 BOSS</span></div>
           <div class="mode-go">进入 <span>→</span></div>
         </button>
         <div class="mode-grid">
@@ -103,6 +104,84 @@
       <span>点击目标锁定 · 数字键 1–4 开火 · Esc 暂停</span>
       <span>手机：轻触目标 / 词块，听写时使用键盘输入</span>
     </footer>
+  </section>
+
+  <!-- 学习舱 / Memory Lab -->
+  <section id="learn" class="screen learn hidden">
+    <header class="learn-top">
+      <button id="btn-learn-back" class="hud-icon" aria-label="返回基地">←</button>
+      <div class="learn-heading"><p class="eyebrow">MEMORY LAB // 记忆实验室</p><h2>先认识，再开火</h2></div>
+      <div class="learn-progress">
+        <span id="learn-progress-text">WORD 01 / 06</span>
+        <div class="learn-progress-track"><i id="learn-progress-fill"></i></div>
+      </div>
+      <div class="learn-xp"><span>XP</span><b id="learn-xp">0</b></div>
+      <button id="btn-learn-skip" class="btn btn-ghost btn-sm">跳过学习</button>
+    </header>
+
+    <main class="learn-main">
+      <div class="learn-core-label"><span>MEMORY CORE // 词核</span><b>扫描字母 · 建立记忆链路</b></div>
+      <section id="learn-card" class="learn-card panel">
+        <div class="learn-card-top"><span id="learn-index">WORD 01 / 06</span><span id="learn-pos">n.</span></div>
+        <div class="learn-word-row">
+          <h1 id="learn-word">word</h1>
+          <button id="btn-learn-audio" class="learn-audio" aria-label="播放发音">▶</button>
+        </div>
+        <p id="learn-example" class="learn-example"></p>
+        <p id="learn-question" class="learn-question">从语境中判断它的意思</p>
+        <div id="learn-options" class="learn-options"></div>
+        <div id="learn-reveal" class="learn-reveal hidden">
+          <div id="learn-zh" class="learn-zh"></div>
+          <div id="learn-def" class="learn-def"></div>
+          <div id="learn-syn" class="learn-syn"></div>
+          <button id="btn-learn-next" class="btn btn-primary">记住了，下一个 →</button>
+        </div>
+      </section>
+
+      <aside class="learn-side">
+        <div class="memory-orbit">
+          <div id="memory-ring" class="memory-ring">
+            <div><b id="memory-percent">0%</b><span>ENCODED</span></div>
+          </div>
+          <div class="memory-stats"><span>已编码 <b id="learn-encoded">0</b></span><span>正确 <b id="learn-correct">0</b></span></div>
+        </div>
+        <div class="learn-actions">
+          <button id="btn-learn-replay" class="btn btn-ghost">▶ 重听发音</button>
+          <button id="btn-learn-slow" class="btn btn-ghost">0.8× 慢速</button>
+        </div>
+        <div class="learn-tip panel">
+          <p class="eyebrow">MEMORY TIP</p>
+          <p id="learn-tip">先听发音，再根据例句猜词义。答错也会显示完整释义，不扣分。</p>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="learn-rail">
+      <div id="learn-rail" class="learn-rail-inner"></div>
+      <div class="learn-rail-meta"><span>已学习 <b id="learn-studied-count">0</b> 词</span><span>本组 <b id="learn-total">6</b> 词</span></div>
+    </footer>
+
+    <div id="learn-match" class="learn-match hidden">
+      <div class="learn-match-shell panel">
+        <div class="learn-match-head"><div><p class="eyebrow">MEMORY LINK</p><h2>记忆链路</h2></div><span id="learn-match-progress">0 / 4</span></div>
+        <p class="learn-match-sub">点击左边单词，再点右边正确释义。配对成功会点亮一条记忆链路。</p>
+        <div class="match-columns">
+          <div id="match-words" class="match-col"></div>
+          <div id="match-meanings" class="match-col"></div>
+        </div>
+        <div class="learn-match-actions"><button id="btn-match-done" class="btn btn-primary" disabled>完成学习 →</button></div>
+      </div>
+    </div>
+
+    <div id="learn-done" class="learn-done hidden">
+      <div class="learn-done-card panel">
+        <p class="eyebrow">MEMORY ENCODED</p>
+        <h2>学习完成</h2>
+        <div id="learn-done-stats" class="learn-done-stats"></div>
+        <button id="btn-learn-battle" class="btn btn-primary btn-xl">进入战场 →</button>
+        <button id="btn-learn-home" class="btn btn-ghost">返回基地</button>
+      </div>
+    </div>
   </section>
 
   <!-- 游戏 HUD -->

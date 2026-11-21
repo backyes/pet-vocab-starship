@@ -201,7 +201,7 @@ function defaultSave() {
     achievements: {},
     stats: {
       answers: 0, correct: 0, wrong: 0, shots: 0, dictations: 0,
-      sentences: 0, clozes: 0, bosses: 0, perfects: 0,
+      sentences: 0, clozes: 0, bosses: 0, perfects: 0, studied: 0,
       bestCombo: 0, totalXp: 0, sectorsCleared: 0,
     },
     best: {},
@@ -304,6 +304,8 @@ const ACHIEVEMENTS = [
   { id: "perfect_10", name: "完美主义", desc: "累计 10 次 PERFECT", icon: "◇", check: () => save.stats.perfects >= 10 },
   { id: "boss_1", name: "词王终结者", desc: "击败第一个词王", icon: "☠", check: () => save.stats.bosses >= 1 },
   { id: "three_star", name: "三星舰长", desc: "在一个星域拿到 3 星", icon: "★", check: () => Object.values(save.sectors).some((sector) => sector.stars >= 3) },
+  { id: "study_10", name: "记忆编码", desc: "在记忆实验室学习 10 个词", icon: "◉", check: () => save.stats.studied >= 10 },
+  { id: "study_50", name: "长期记忆", desc: "在记忆实验室学习 50 个词", icon: "◍", check: () => save.stats.studied >= 50 },
   { id: "level_10", name: "十级航员", desc: "舰员等级达到 10 级", icon: "▲", check: () => save.pilot.level >= 10 },
   { id: "all_sectors", name: "星海传奇", desc: "净化全部 12 个星域", icon: "✹", check: () => THEMES.every((theme) => save.sectors[theme.id]?.cleared) },
 ];
@@ -455,6 +457,11 @@ $("btn-continue").addEventListener("click", () => {
 $("btn-map").addEventListener("click", () => {
   audio.ui();
   openOverlay("map");
+});
+
+$("btn-learn").addEventListener("click", () => {
+  audio.ui();
+  startLearning({ themeId: THEMES[nextSectorIndex()].id, count: 6, returnTo: "campaign" });
 });
 
 $$(".nav [data-open]").forEach((button) => {
@@ -893,9 +900,432 @@ $("btn-reset")?.addEventListener("click", () => {
 });
 
 /* ============================================================
+   Memory Lab / 学习环节
+   ============================================================ */
+function learningWords(themeId, count = 6) {
+  let pool = (PET_BY_THEME[themeId] || []).filter((word) => word.quiz && word.ex && findTargetToken(word) >= 0);
+  if (pool.length < count) pool = PET_WORDS.filter((word) => word.quiz && word.ex && findTargetToken(word) >= 0);
+  const scored = pool.map((word) => {
+    const progress = save.progress[word.w] || {};
+    const mastery = progress.mastery || 0;
+    let score = (progress.seen ? 0 : 4) + (progress.wrong || 0) * 1.8 + (100 - mastery) / 24;
+    if (progress.studied) score -= 2.2;
+    score += Math.random() * 1.4;
+    return { word, score };
+  }).sort((a, b) => b.score - a.score);
+  const picked = [];
+  for (const item of scored) {
+    if (picked.length >= count) break;
+    if (picked.some((word) => zhOverlap(word.zh, item.word.zh))) continue;
+    picked.push(item.word);
+  }
+  for (const item of scored) {
+    if (picked.length >= count) break;
+    if (!picked.includes(item.word)) picked.push(item.word);
+  }
+  return picked;
+}
+
+function makeLearnOptions(word) {
+  const themePool = (PET_BY_THEME[word.theme] || []).filter((item) => item.quiz && item.w !== word.w);
+  const allPool = PET_WORDS.filter((item) => item.quiz && item.w !== word.w);
+  const usable = (item) => item.zh && !zhOverlap(item.zh, word.zh) && item.w !== word.w;
+  const group = posGroup(word.pos);
+  let candidates = themePool.filter((item) => usable(item) && posGroup(item.pos) === group);
+  if (candidates.length < 2) candidates = candidates.concat(themePool.filter(usable));
+  if (candidates.length < 2) candidates = candidates.concat(allPool.filter((item) => usable(item) && posGroup(item.pos) === group));
+  if (candidates.length < 2) candidates = candidates.concat(allPool.filter(usable));
+  const seen = new Set([word.zh]);
+  const distractors = [];
+  for (const item of sample(candidates, 8)) {
+    if (seen.has(item.zh)) continue;
+    seen.add(item.zh);
+    distractors.push(item.zh);
+    if (distractors.length >= 2) break;
+  }
+  return shuffle([
+    { text: word.zh, correct: true },
+    ...distractors.map((text) => ({ text, correct: false })),
+  ]);
+}
+
+function highlightedExample(word) {
+  if (!word.ex) return escapeHtml(word.def || "暂无例句");
+  const tokens = sentenceTokens(word.ex);
+  const index = findTargetToken(word);
+  if (index < 0) return escapeHtml(word.ex);
+  return tokens.map((token, tokenIndex) => (
+    tokenIndex === index ? `<mark>${escapeHtml(token)}</mark>` : escapeHtml(token)
+  )).join(" ");
+}
+
+function startLearning({ themeId, count = 6, returnTo = "campaign" } = {}) {
+  if (!dataReady || session) return;
+  clearTimers();
+  hideAllOverlays();
+  const theme = themeById(themeId || currentThemeId);
+  currentThemeId = theme.id;
+  save.lastTheme = theme.id;
+  ensureDaily();
+  const words = learningWords(theme.id, count);
+  if (!words.length) {
+    toast("没有可学习的词", "请刷新词库后重试。", "bad");
+    return;
+  }
+  learn = {
+    theme,
+    words,
+    index: 0,
+    options: [],
+    answered: false,
+    encoded: 0,
+    correctCount: 0,
+    xp: 0,
+    rate: 1,
+    results: [],
+    returnTo,
+    phase: "card",
+    matchPairs: [],
+    matchMeanings: [],
+    matched: new Set(),
+    selectedWord: null,
+    matchProgress: 0,
+    startedAt: Date.now(),
+  };
+  $("home").classList.add("hidden");
+  $("hud").classList.add("hidden");
+  $("learn").classList.remove("hidden");
+  $("learn-match").classList.add("hidden");
+  $("learn-done").classList.add("hidden");
+  if (world) {
+    world.setTheme(theme, { animate: true });
+    world.setInteractive(false);
+    world.showCockpit(false);
+    world.enterLab(theme);
+  }
+  warp();
+  renderLearnCard();
+  audio.boss();
+}
+
+function renderLearningChrome() {
+  if (!learn) return;
+  const total = learn.words.length;
+  const progress = (learn.index + (learn.answered ? 1 : 0)) / total;
+  if ($("learn-progress-text")) $("learn-progress-text").textContent = `WORD ${String(Math.min(learn.index + 1, total)).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+  if ($("learn-progress-fill")) $("learn-progress-fill").style.width = `${progress * 100}%`;
+  if ($("learn-xp")) $("learn-xp").textContent = formatNum(learn.xp);
+  if ($("learn-total")) $("learn-total").textContent = total;
+  if ($("learn-encoded")) $("learn-encoded").textContent = learn.encoded;
+  if ($("learn-correct")) $("learn-correct").textContent = learn.correctCount;
+  if ($("learn-studied-count")) $("learn-studied-count").textContent = learn.encoded;
+  const pct = total ? Math.round((learn.encoded / total) * 100) : 0;
+  const ring = $("memory-ring");
+  if (ring) ring.style.setProperty("--pct", `${pct}%`);
+  if ($("memory-percent")) $("memory-percent").textContent = `${pct}%`;
+  const rail = $("learn-rail");
+  if (rail) {
+    rail.innerHTML = learn.words.map((word, index) => {
+      const result = learn.results[index];
+      const classes = [
+        "learn-rail-chip",
+        index === learn.index ? "active" : "",
+        result?.correct ? "done" : "",
+        result && !result.correct ? "missed" : "",
+      ].filter(Boolean).join(" ");
+      return `<button class="${classes}" ${index !== learn.index ? "disabled" : ""}>
+        <b>${escapeHtml(word.w)}</b>
+        <span>${result ? (result.correct ? "已编码" : "需复习") : index === learn.index ? "当前" : "待学习"}</span>
+      </button>`;
+    }).join("");
+  }
+}
+
+function renderLearnCard() {
+  if (!learn) return;
+  if (learn.index >= learn.words.length) {
+    startLearningMatch();
+    return;
+  }
+  const word = learn.words[learn.index];
+  const card = $("learn-card");
+  if (card) {
+    card.style.animation = "none";
+    void card.offsetWidth;
+    card.style.animation = "";
+  }
+  learn.answered = false;
+  learn.options = makeLearnOptions(word);
+  if ($("learn-index")) $("learn-index").textContent = `WORD ${String(learn.index + 1).padStart(2, "0")} / ${String(learn.words.length).padStart(2, "0")}`;
+  if ($("learn-pos")) $("learn-pos").textContent = word.pos || (word.w.includes(" ") ? "phrase" : "word");
+  if ($("learn-word")) $("learn-word").textContent = word.w;
+  if ($("learn-example")) $("learn-example").innerHTML = highlightedExample(word);
+  if ($("learn-question")) $("learn-question").textContent = "从语境中判断它的意思";
+  const options = $("learn-options");
+  if (options) {
+    options.innerHTML = learn.options.map((option, index) => (
+      `<button class="learn-option" data-learn-option="${index}">${escapeHtml(option.text)}</button>`
+    )).join("");
+    options.querySelectorAll("[data-learn-option]").forEach((button) => {
+      button.addEventListener("click", () => answerLearn(Number(button.dataset.learnOption)));
+    });
+  }
+  $("learn-reveal")?.classList.add("hidden");
+  if ($("learn-tip")) {
+    const tips = [
+      "先听发音，再根据例句猜词义。答错也会显示完整释义，不扣分。",
+      "把单词和它出现的语境一起记，比单独背中文更牢。",
+      "注意词性：同一个词在不同词性下意思可能不同。",
+      "记忆链路会把单词和释义重新配对，检验刚才的学习。",
+    ];
+    $("learn-tip").textContent = tips[learn.index % tips.length];
+  }
+  if (world) world.setLabWord(word, learn.index, learn.words.length);
+  renderLearningChrome();
+  later(() => {
+    if (learn && learn.phase === "card" && learn.index === learn.words.indexOf(word) && !learn.answered) audio.playWord(word);
+  }, 380);
+  later(() => {
+    if (learn && learn.phase === "card") $("learn-card")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, 60);
+}
+
+function answerLearn(optionIndex) {
+  if (!learn || learn.answered) return;
+  const word = learn.words[learn.index];
+  const option = learn.options[optionIndex];
+  if (!option) return;
+  learn.answered = true;
+  const correct = !!option.correct;
+  const buttons = [...($("learn-options")?.querySelectorAll("[data-learn-option]") || [])];
+  buttons.forEach((button, index) => {
+    button.disabled = true;
+    if (learn.options[index].correct) button.classList.add("correct");
+    if (index === optionIndex && !correct) button.classList.add("wrong");
+    if (index !== optionIndex && !learn.options[index].correct) button.classList.add("dim");
+  });
+  learn.results[learn.index] = { correct };
+  learn.encoded += 1;
+  if (correct) learn.correctCount += 1;
+  const xp = correct ? 12 : 4;
+  learn.xp += xp;
+  const levels = addXp(xp);
+  save.stats.studied = (save.stats.studied || 0) + 1;
+  const progress = save.progress[word.w] || { seen: 0, correct: 0, wrong: 0, streak: 0, mastery: 0, last: 0 };
+  progress.studied = true;
+  progress.studiedAt = Date.now();
+  save.progress[word.w] = progress;
+  persist();
+  if (correct) {
+    audio.hit(learn.correctCount);
+    audio.playWord(word);
+    if (world) {
+      world.burst(new THREE.Vector3(0, 2.8, 0.4), learn.theme.color, 34, 3);
+      world.shake(0.04);
+    }
+  } else {
+    audio.warn();
+    later(() => audio.playWord(word), 180);
+  }
+  if ($("learn-question")) $("learn-question").textContent = correct ? "编码成功：这个词已进入记忆链" : "正确答案已标出：把它和语境一起记住";
+  if ($("learn-zh")) $("learn-zh").textContent = word.zh;
+  if ($("learn-def")) $("learn-def").textContent = word.def ? `EN · ${word.def}` : "";
+  if ($("learn-syn")) $("learn-syn").textContent = word.syn?.length ? `同义替换 · ${word.syn.join(" / ")}` : "";
+  const next = $("btn-learn-next");
+  if (next) next.textContent = learn.index + 1 >= learn.words.length ? "进入记忆链路 →" : "记住了，下一个 →";
+  $("learn-reveal")?.classList.remove("hidden");
+  later(() => {
+    const card = $("learn-card");
+    if (card) card.scrollTo({ top: card.scrollHeight, behavior: "smooth" });
+  }, 120);
+  renderLearningChrome();
+  checkAchievements();
+  if (levels.length) {
+    // addXp already displays the toast; keep the lab clean.
+  }
+}
+
+function nextLearnCard() {
+  if (!learn || !learn.answered) return;
+  audio.ui();
+  learn.index += 1;
+  if (learn.index >= learn.words.length) {
+    startLearningMatch();
+  } else {
+    renderLearnCard();
+  }
+}
+
+function startLearningMatch() {
+  if (!learn) return;
+  const unique = [];
+  for (const word of learn.words) {
+    if (!unique.some((item) => zhOverlap(item.zh, word.zh))) unique.push(word);
+    if (unique.length >= 4) break;
+  }
+  learn.matchPairs = unique.length >= 2 ? unique : learn.words.slice(0, 4);
+  learn.matchMeanings = shuffle(learn.matchPairs);
+  learn.matched = new Set();
+  learn.selectedWord = null;
+  learn.phase = "match";
+  $("learn-match")?.classList.remove("hidden");
+  $("learn-done")?.classList.add("hidden");
+  renderLearningMatch();
+  audio.ui();
+}
+
+function renderLearningMatch() {
+  if (!learn) return;
+  const wordNode = $("match-words");
+  const meaningNode = $("match-meanings");
+  if (!wordNode || !meaningNode) return;
+  wordNode.innerHTML = learn.matchPairs.map((word, index) => `
+    <button class="match-btn ${learn.matched.has(word.w) ? "matched" : ""}" data-match-word="${escapeHtml(word.w)}">
+      <b>${escapeHtml(word.w)}</b><span>${escapeHtml(word.pos || "")}</span>
+    </button>
+  `).join("");
+  meaningNode.innerHTML = learn.matchMeanings.map((word) => `
+    <button class="match-btn ${learn.matched.has(word.w) ? "matched" : ""}" data-match-meaning="${escapeHtml(word.w)}">
+      ${escapeHtml(word.zh)}
+    </button>
+  `).join("");
+  wordNode.querySelectorAll("[data-match-word]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (learn.matched.has(button.dataset.matchWord)) return;
+      learn.selectedWord = button.dataset.matchWord;
+      wordNode.querySelectorAll("[data-match-word]").forEach((item) => item.classList.remove("selected"));
+      button.classList.add("selected");
+      audio.ui();
+    });
+  });
+  meaningNode.querySelectorAll("[data-match-meaning]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (learn.matched.has(button.dataset.matchMeaning)) return;
+      if (!learn.selectedWord) {
+        toast("先选一个单词", "点击左边单词，再点右边释义。", "bad");
+        return;
+      }
+      const wordNodeSelected = wordNode.querySelector(`[data-match-word="${CSS.escape(learn.selectedWord)}"]`);
+      const meaningNodeSelected = button;
+      if (learn.selectedWord === button.dataset.matchMeaning) {
+        learn.matched.add(learn.selectedWord);
+        wordNodeSelected?.classList.add("matched");
+        meaningNodeSelected.classList.add("matched");
+        audio.hit(learn.matched.size);
+        if (world) world.burst(new THREE.Vector3(0, 3.2, 0.4), learn.theme.color, 30, 3);
+        learn.selectedWord = null;
+      } else {
+        wordNodeSelected?.classList.add("wrong");
+        meaningNodeSelected.classList.add("wrong");
+        audio.wrong();
+        later(() => {
+          wordNodeSelected?.classList.remove("wrong");
+          meaningNodeSelected.classList.remove("wrong");
+        }, 420);
+        learn.selectedWord = null;
+      }
+      if ($("learn-match-progress")) $("learn-match-progress").textContent = `${learn.matched.size} / ${learn.matchPairs.length}`;
+      if (learn.matched.size === learn.matchPairs.length) {
+        if ($("btn-match-done")) $("btn-match-done").disabled = false;
+        audio.level();
+      }
+    });
+  });
+  if ($("learn-match-progress")) $("learn-match-progress").textContent = `${learn.matched.size} / ${learn.matchPairs.length}`;
+  if ($("btn-match-done")) $("btn-match-done").disabled = learn.matched.size !== learn.matchPairs.length;
+}
+
+function finishLearning() {
+  if (!learn) return;
+  learn.phase = "done";
+  const bonus = learn.matched.size === learn.matchPairs.length ? 30 : 0;
+  learn.xp += bonus;
+  if (bonus) {
+    addXp(bonus);
+    audio.level();
+  }
+  save.stats.studied = (save.stats.studied || 0) + 0;
+  persist();
+  checkAchievements();
+  $("learn-match")?.classList.add("hidden");
+  $("learn-done")?.classList.remove("hidden");
+  const stats = $("learn-done-stats");
+  if (stats) {
+    stats.innerHTML = `
+      <div><b>${learn.encoded}</b><span>已编码</span></div>
+      <div><b>${learn.correctCount}</b><span>首次选对</span></div>
+      <div><b>${formatNum(learn.xp)}</b><span>获得 XP</span></div>
+    `;
+  }
+  if ($("btn-learn-battle")) $("btn-learn-battle").textContent = learn.returnTo === "campaign" ? "进入战场 →" : "返回基地";
+}
+
+function exitLearning() {
+  clearTimers();
+  $("learn")?.classList.add("hidden");
+  $("learn-match")?.classList.add("hidden");
+  $("learn-done")?.classList.add("hidden");
+  learn = null;
+  if (world) {
+    world.exitLab();
+    world.showCockpit(false);
+  }
+  $("home").classList.remove("hidden");
+  updateHome();
+}
+
+function startBattleAfterLearning() {
+  const snapshot = learn;
+  if (!snapshot) return;
+  const words = snapshot.words.map((word) => word.w);
+  const themeId = snapshot.theme.id;
+  $("learn")?.classList.add("hidden");
+  $("learn-match")?.classList.add("hidden");
+  $("learn-done")?.classList.add("hidden");
+  learn = null;
+  startSession("campaign", themeId, { priorityWords: words });
+}
+
+function skipLearning() {
+  if (!learn) return;
+  const themeId = learn.theme.id;
+  const returnTo = learn.returnTo;
+  $("learn")?.classList.add("hidden");
+  $("learn-match")?.classList.add("hidden");
+  $("learn-done")?.classList.add("hidden");
+  learn = null;
+  if (world) world.exitLab();
+  if (returnTo === "campaign") startSession("campaign", themeId, {});
+  else exitLearning();
+}
+
+$("btn-learn-back")?.addEventListener("click", () => exitLearning());
+$("btn-learn-skip")?.addEventListener("click", () => skipLearning());
+$("btn-learn-audio")?.addEventListener("click", () => {
+  if (learn) audio.playWord(learn.words[learn.index]);
+});
+$("btn-learn-replay")?.addEventListener("click", () => {
+  if (learn) audio.playWord(learn.words[learn.index], { rate: learn.rate });
+});
+$("btn-learn-slow")?.addEventListener("click", () => {
+  if (!learn) return;
+  learn.rate = learn.rate === 1 ? 0.75 : 1;
+  if ($("btn-learn-slow")) $("btn-learn-slow").textContent = learn.rate === 1 ? "0.8× 慢速" : "1.0× 正常";
+  audio.playWord(learn.words[learn.index], { rate: learn.rate });
+});
+$("btn-learn-next")?.addEventListener("click", () => nextLearnCard());
+$("btn-match-done")?.addEventListener("click", () => finishLearning());
+$("btn-learn-battle")?.addEventListener("click", () => {
+  if (learn?.returnTo === "campaign") startBattleAfterLearning();
+  else exitLearning();
+});
+$("btn-learn-home")?.addEventListener("click", () => exitLearning());
+
+/* ============================================================
    Session / gameplay
    ============================================================ */
 let session = null;
+let learn = null;
 let pendingTimers = new Set();
 let lastFrame = performance.now();
 
@@ -950,12 +1380,15 @@ function pickWeighted(pool, type, used) {
   return candidates[candidates.length - 1];
 }
 
-function campaignPlan(themeId) {
+function campaignPlan(themeId, preferredWords = []) {
   const themePool = PET_BY_THEME[themeId] || [];
   const pool = themePool.length >= 24 ? themePool : PET_WORDS;
   const schedule = ["meaning", "cloze", "meaning", "dictation", "meaning", "sentence", "cloze", "meaning", "dictation", "cloze", "meaning", "boss"];
   const used = new Set();
   const plan = [];
+  const preferred = preferredWords
+    .map((word) => (typeof word === "string" ? WORDS.find((item) => item.w === word) : word))
+    .filter((word) => word && word.quiz);
   for (const type of schedule) {
     if (type === "boss") {
       const words = [];
@@ -968,7 +1401,13 @@ function campaignPlan(themeId) {
       if (words.length) plan.push({ type: "boss", words });
       continue;
     }
-    let word = pickWeighted(pool, type, used);
+    let word = null;
+    const preferredIndex = preferred.findIndex((item) => !used.has(item.w) && canUse(item, type));
+    if (preferredIndex >= 0) {
+      word = preferred[preferredIndex];
+      preferred.splice(preferredIndex, 1);
+    }
+    if (!word) word = pickWeighted(pool, type, used);
     if (!word) word = pickWeighted(pool, "meaning", used);
     if (!word) break;
     used.add(word.w);
@@ -1009,18 +1448,23 @@ function startCampaign(themeId) {
     openOverlay("map");
     return;
   }
-  startSession("campaign", themeId);
+  startLearning({ themeId, count: 6, returnTo: "campaign" });
 }
 
 function startSession(mode, themeId, options = {}) {
   if (!dataReady) return;
   clearTimers();
   session = null;
+  learn = null;
   hideAllOverlays();
+  $("learn")?.classList.add("hidden");
+  $("learn-match")?.classList.add("hidden");
+  $("learn-done")?.classList.add("hidden");
+  if (world) world.exitLab();
   const theme = themeById(themeId || currentThemeId);
   const config = MODE_CONFIG[mode] || MODE_CONFIG.campaign;
   const themeIndex = THEMES.findIndex((item) => item.id === theme.id);
-  const plan = mode === "campaign" ? campaignPlan(theme.id) : mode === "sprint" ? [] : trainingPlan(mode);
+  const plan = mode === "campaign" ? campaignPlan(theme.id, options.priorityWords || []) : mode === "sprint" ? [] : trainingPlan(mode);
   if (!plan.length && mode !== "sprint") {
     toast("词库还没有准备好", "请刷新页面后重试。", "bad");
     return;
@@ -1081,6 +1525,7 @@ function startSession(mode, themeId, options = {}) {
   if (world) {
     world.setTheme(theme, { animate: true });
     world.setInteractive(false);
+    world.exitLab();
     world.showCockpit(true);
   }
   warp();
@@ -2001,9 +2446,14 @@ function quitToHome() {
   overlayReturn = null;
   hideAllOverlays();
   $("hud").classList.add("hidden");
+  $("learn")?.classList.add("hidden");
+  $("learn-match")?.classList.add("hidden");
+  $("learn-done")?.classList.add("hidden");
+  learn = null;
   $("home").classList.remove("hidden");
   document.body.classList.remove("console-open");
   if (world) {
+    world.exitLab();
     world.hideTargets();
     world.hideBoss();
     world.setInteractive(false);
@@ -2471,6 +2921,7 @@ requestAnimationFrame((now) => {
 /* debug/automation hook (safe: no mutation API exposed) */
 window.__pet = {
   get session() { return session; },
+  get learn() { return learn; },
   get save() { return save; },
   get words() { return WORDS; },
   get themes() { return THEMES; },

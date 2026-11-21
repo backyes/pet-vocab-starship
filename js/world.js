@@ -84,6 +84,7 @@ export class World {
     this.targets = this.createTargets();
     this.boss = this.createBoss();
     this.cockpit = this.createCockpit();
+    this.lab = this.createLab();
     this.resize();
   }
 
@@ -117,8 +118,10 @@ export class World {
     this.buildFloor();
     this.buildAmbient();
     this.buildProps(theme);
+    if (this.labMode && this.propsGroup) this.propsGroup.visible = false;
     this.setStarColor(theme.color);
     this.updateCockpit();
+    this.updateLabTheme();
     this.hideTargets();
     this.hideBoss();
     if (this.ambient?.material) this.ambient.material.color.set(theme.color);
@@ -392,7 +395,7 @@ export class World {
     }
     ctx.fillStyle = "#f2fbff";
     ctx.shadowColor = css;
-    ctx.shadowBlur = 18;
+    ctx.shadowBlur = 24;
     ctx.fillText(word, 104, 82);
     ctx.shadowBlur = 0;
     target.texture.needsUpdate = true;
@@ -633,6 +636,320 @@ export class World {
     this.burst(start, color, 10, 1.4);
   }
 
+  /* --------------------------------------------------------------- lab */
+  createLab() {
+    const group = new THREE.Group();
+    group.visible = false;
+    const core = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.18, 1),
+      new THREE.MeshStandardMaterial({
+        color: 0x071b24,
+        emissive: 0x3df0ff,
+        emissiveIntensity: 2.1,
+        metalness: 0.35,
+        roughness: 0.3,
+        flatShading: true,
+        toneMapped: false,
+      }),
+    );
+    core.position.set(0, 2.85, 0);
+    const shell = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(1.62, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0x9ffcff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.55,
+        toneMapped: false,
+      }),
+    );
+    shell.position.copy(core.position);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this.glowTexture,
+      color: 0x3df0ff,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }));
+    glow.scale.set(7, 7, 1);
+    glow.position.copy(core.position);
+
+    const pedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.35, 2.7, 0.34, 64),
+      new THREE.MeshStandardMaterial({
+        color: 0x07131f,
+        metalness: 0.8,
+        roughness: 0.32,
+        emissive: 0x3df0ff,
+        emissiveIntensity: 0.12,
+      }),
+    );
+    pedestal.position.set(0, -0.62, 0);
+    const pedestalRing = new THREE.Mesh(
+      new THREE.TorusGeometry(2.36, 0.025, 8, 96),
+      new THREE.MeshBasicMaterial({ color: 0x3df0ff, transparent: true, opacity: 0.7, depthWrite: false }),
+    );
+    pedestalRing.rotation.x = Math.PI / 2;
+    pedestalRing.position.set(0, -0.44, 0);
+
+    const labFloor = new THREE.Mesh(
+      new THREE.CircleGeometry(21, 72),
+      new THREE.MeshStandardMaterial({
+        color: 0x02070d,
+        metalness: 0.6,
+        roughness: 0.38,
+        emissive: 0x3df0ff,
+        emissiveIntensity: 0.035,
+      }),
+    );
+    labFloor.rotation.x = -Math.PI / 2;
+    labFloor.position.y = -0.84;
+    const labGrid = new THREE.GridHelper(42, 42, 0x3df0ff, 0x3df0ff);
+    labGrid.position.y = -0.82;
+    labGrid.material.transparent = true;
+    labGrid.material.opacity = 0.12;
+    labGrid.material.depthWrite = false;
+
+    const rings = [];
+    for (let i = 0; i < 3; i += 1) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.95 + i * 0.34, 0.012, 6, 96),
+        new THREE.MeshBasicMaterial({
+          color: i === 1 ? 0xffd45e : 0x3df0ff,
+          transparent: true,
+          opacity: 0.42 - i * 0.1,
+          depthWrite: false,
+        }),
+      );
+      ring.position.copy(core.position);
+      ring.rotation.set(Math.PI / 2 + i * 0.5, i * 0.7, i * 0.35);
+      rings.push(ring);
+    }
+
+    const beams = [];
+    for (let i = 0; i < 3; i += 1) {
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.14, 3.3, 8, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0x3df0ff,
+          transparent: true,
+          opacity: 0.16,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        }),
+      );
+      const angle = (i / 3) * TAU;
+      beam.position.set(Math.cos(angle) * 1.1, 1.1, Math.sin(angle) * 1.1);
+      beams.push(beam);
+    }
+
+    const letters = [];
+    for (let i = 0; i < 18; i += 1) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        opacity: 0.9,
+      }));
+      sprite.scale.set(0.82, 0.82, 1);
+      sprite.visible = false;
+      group.add(sprite);
+      letters.push({ sprite, canvas, texture, angle: 0 });
+    }
+
+    const particleCount = 260;
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const angles = new Float32Array(particleCount);
+    const radii = new Float32Array(particleCount);
+    for (let i = 0; i < particleCount; i += 1) {
+      angles[i] = Math.random() * TAU;
+      radii[i] = 2.2 + Math.random() * 2.8;
+      positions[i * 3 + 1] = 1.2 + Math.random() * 3.8;
+      colors[i * 3] = 0.24;
+      colors[i * 3 + 1] = 0.94;
+      colors[i * 3 + 2] = 1;
+    }
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.07,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    particles.userData.angles = angles;
+    particles.userData.radii = radii;
+
+    const backPanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(7.5, 4.2),
+      new THREE.MeshBasicMaterial({
+        color: 0x3df0ff,
+        transparent: true,
+        opacity: 0.045,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    backPanel.position.set(0, 3.2, -4.5);
+
+    const light = new THREE.PointLight(0x3df0ff, 32, 18, 2);
+    light.position.set(0, 3.2, 2.5);
+
+    group.add(labFloor, labGrid, core, shell, glow, pedestal, pedestalRing, ...rings, ...beams, particles, backPanel, light);
+    this.worldGroup.add(group);
+    return {
+      group, core, shell, glow, pedestal, pedestalRing, labFloor, labGrid, rings, beams, letters,
+      particles, particleGeometry, particleMaterial, backPanel, light,
+      word: null,
+    };
+  }
+
+  updateLabTheme() {
+    if (!this.lab || !this.theme) return;
+    const color = new THREE.Color(this.theme.color);
+    this.lab.core.material.color.set(0x071b24);
+    this.lab.core.material.emissive.copy(color);
+    this.lab.shell.material.color.copy(color);
+    this.lab.glow.material.color.copy(color);
+    this.lab.pedestal.material.emissive.copy(color);
+    this.lab.pedestalRing.material.color.copy(color);
+    this.lab.rings.forEach((ring, index) => {
+      if (index === 1) return;
+      ring.material.color.copy(color);
+    });
+    this.lab.beams.forEach((beam) => beam.material.color.copy(color));
+    this.lab.light.color.copy(color);
+    this.lab.backPanel.material.color.copy(color);
+    if (this.lab.labGrid) {
+      this.lab.labGrid.material.color.copy(color);
+      this.lab.labGrid.material.opacity = 0.12;
+    }
+    if (this.lab.labFloor) this.lab.labFloor.material.emissive.copy(color);
+    this.lab.letterColor = color;
+  }
+
+  enterLab(theme) {
+    this.labMode = true;
+    if (this.propsGroup) this.propsGroup.visible = false;
+    this.lab.group.visible = true;
+    this.hideTargets();
+    this.hideBoss();
+    this.showCockpit(false);
+    this.orbitTarget = 0;
+    this.updateLabTheme();
+    this.resize();
+    this.shake(0.04);
+  }
+
+  exitLab() {
+    this.labMode = false;
+    if (this.lab) this.lab.group.visible = false;
+    if (this.propsGroup) this.propsGroup.visible = true;
+    this.resize();
+  }
+
+  setLabWord(word, index = 0) {
+    if (!this.lab || !word) return;
+    const base = new THREE.Color(this.theme?.color || "#3df0ff");
+    const color = base.clone().offsetHSL((index % 6) * 0.035, 0, 0.03);
+    this.lab.core.material.color.set(0x071b24);
+    this.lab.core.material.emissive.copy(color);
+    this.lab.shell.material.color.copy(color);
+    this.lab.glow.material.color.copy(color);
+    this.lab.pedestalRing.material.color.copy(color);
+    this.lab.rings.forEach((ring, ringIndex) => {
+      ring.material.color.copy(ringIndex === 1 ? new THREE.Color(0xffd45e) : color);
+    });
+    this.lab.beams.forEach((beam) => beam.material.color.copy(color));
+    this.lab.light.color.copy(color);
+    this.lab.backPanel.material.color.copy(color);
+    this.lab.letters.forEach((item) => {
+      item.sprite.visible = false;
+    });
+    const letters = [...word.w.toUpperCase().replace(/\s+/g, "")].slice(0, 18);
+    letters.forEach((letter, letterIndex) => {
+      const item = this.lab.letters[letterIndex];
+      if (!item) return;
+      item.angle = (letterIndex / Math.max(1, letters.length)) * TAU;
+      item.sprite.visible = true;
+      const ctx = item.canvas.getContext("2d");
+      ctx.clearRect(0, 0, 128, 128);
+      ctx.fillStyle = "rgba(2,9,16,0.55)";
+      ctx.beginPath();
+      ctx.arc(64, 64, 54, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = `#${color.getHexString()}`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.font = '700 76px "Avenir Next", Arial, sans-serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = `#${color.getHexString()}`;
+      ctx.shadowBlur = 24;
+      ctx.fillText(letter, 64, 68);
+      item.texture.needsUpdate = true;
+    });
+    this.lab.word = word;
+    this.lab.pulse = 1;
+  }
+
+  updateLab(dt, time) {
+    const lab = this.lab;
+    if (!lab || !lab.group.visible) return;
+    lab.core.rotation.y += dt * 0.35;
+    lab.core.rotation.x += dt * 0.12;
+    lab.shell.rotation.y -= dt * 0.26;
+    lab.shell.rotation.z += dt * 0.1;
+    lab.rings.forEach((ring, index) => {
+      ring.rotation.z += dt * (0.18 + index * 0.07);
+      ring.rotation.y += dt * (index % 2 ? -0.12 : 0.12);
+    });
+    lab.pedestalRing.rotation.z += dt * 0.2;
+    lab.letters.forEach((item, index) => {
+      if (!item.sprite.visible) return;
+      const angle = item.angle + time * 0.12;
+      item.sprite.position.set(
+        Math.cos(angle) * 2.55,
+        2.85 + Math.sin(angle) * 2.32,
+        1.25 + Math.sin(time * 0.8 + index) * 0.08,
+      );
+      const scale = 0.74 + Math.sin(time * 1.4 + index) * 0.04;
+      item.sprite.scale.set(scale, scale, 1);
+    });
+    const pos = lab.particleGeometry.attributes.position;
+    for (let i = 0; i < pos.count; i += 1) {
+      const angle = (lab.particles.userData.angles?.[i] ?? 0) + time * 0.18;
+      pos.setX(i, Math.cos(angle) * (lab.particles.userData.radii?.[i] ?? 2.5));
+      pos.setZ(i, Math.sin(angle) * (lab.particles.userData.radii?.[i] ?? 2.5));
+    }
+    pos.needsUpdate = true;
+    lab.particles.rotation.y += dt * 0.06;
+    if (lab.pulse > 0) {
+      lab.pulse = Math.max(0, lab.pulse - dt * 1.8);
+      const s = 1 + lab.pulse * 0.18;
+      lab.core.scale.setScalar(s);
+      lab.glow.material.opacity = 0.55 + lab.pulse * 0.35;
+    } else {
+      lab.core.scale.setScalar(1 + Math.sin(time * 1.8) * 0.02);
+      lab.glow.material.opacity = 0.55 + Math.sin(time * 2.2) * 0.08;
+    }
+    lab.beams.forEach((beam, index) => {
+      beam.material.opacity = 0.1 + Math.sin(time * 1.5 + index) * 0.04;
+    });
+  }
+
   /* --------------------------------------------------------------- cockpit */
   createCockpit() {
     const group = new THREE.Group();
@@ -747,6 +1064,24 @@ export class World {
       depthWrite: false,
     }));
     glow.scale.set(8, 8, 1);
+    const labFloor = new THREE.Mesh(
+      new THREE.CircleGeometry(21, 72),
+      new THREE.MeshStandardMaterial({
+        color: 0x02070d,
+        metalness: 0.6,
+        roughness: 0.38,
+        emissive: 0x3df0ff,
+        emissiveIntensity: 0.035,
+      }),
+    );
+    labFloor.rotation.x = -Math.PI / 2;
+    labFloor.position.y = -0.84;
+    const labGrid = new THREE.GridHelper(42, 42, 0x3df0ff, 0x3df0ff);
+    labGrid.position.y = -0.82;
+    labGrid.material.transparent = true;
+    labGrid.material.opacity = 0.12;
+    labGrid.material.depthWrite = false;
+
     const rings = [];
     for (let i = 0; i < 3; i += 1) {
       const ring = new THREE.Mesh(
@@ -1252,11 +1587,19 @@ export class World {
     this.camera.aspect = width / height;
     this.camera.fov = this.portrait ? 58 : 50;
     this.camera.updateProjectionMatrix();
-    const camY = this.portrait ? 4.9 : 4.2;
-    const camZ = this.portrait ? 17.2 : this.compact ? 15.0 : 13.8;
-    this.baseCam = new THREE.Vector3(0, camY, camZ);
-    this.camera.position.copy(this.baseCam);
-    this.camera.lookAt(0, this.portrait ? 2.4 : 1.9, 0);
+    if (this.labMode) {
+      const labY = this.portrait ? 4.0 : 3.5;
+      const labZ = this.portrait ? 12.5 : 10.8;
+      this.baseCam = new THREE.Vector3(0, labY, labZ);
+      this.camera.position.copy(this.baseCam);
+      this.camera.lookAt(0, this.portrait ? 1.9 : 2.55, 0);
+    } else {
+      const camY = this.portrait ? 4.9 : 4.2;
+      const camZ = this.portrait ? 17.2 : this.compact ? 15.0 : 13.8;
+      this.baseCam = new THREE.Vector3(0, camY, camZ);
+      this.camera.position.copy(this.baseCam);
+      this.camera.lookAt(0, this.portrait ? 2.4 : 1.9, 0);
+    }
     if (this.targets) {
       const layout = this.targetLayout();
       this.targets.forEach((target, index) => {
@@ -1303,6 +1646,9 @@ export class World {
         target.glow.material.opacity = 0.4 + target.hover * 0.3;
       }
     });
+
+    // learning lab
+    this.updateLab(dt, time);
 
     // boss
     if (this.boss.alive) {
@@ -1389,7 +1735,7 @@ export class World {
       this.camera.position.x += (Math.random() - 0.5) * shake;
       this.camera.position.y += (Math.random() - 0.5) * shake;
     }
-    this.camera.lookAt(this.orbit * 0.7, this.portrait ? 2.4 : 1.9, 0);
+    this.camera.lookAt(this.orbit * 0.7, this.labMode ? (this.portrait ? 1.9 : 2.55) : this.portrait ? 2.4 : 1.9, 0);
   }
 
   render() {
