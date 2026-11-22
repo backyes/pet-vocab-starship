@@ -1,4 +1,4 @@
-const VERSION = "pet-starship-v8";
+const VERSION = "pet-starship-v9";
 const SHELL = [
   "./",
   "index.html",
@@ -44,13 +44,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // 导航请求按 URL 分别缓存：项目里还有 ink-cards/ 等子页面，
+  // 统一覆盖 "index.html" 会让星舰首页的离线缓存被子页面顶掉。
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).then((response) => {
         const copy = response.clone();
-        caches.open(VERSION).then((cache) => cache.put("index.html", copy));
+        caches.open(VERSION).then((cache) => cache.put(request, copy));
         return response;
-      }).catch(() => caches.match("index.html")),
+      }).catch(() => caches.match(request).then((hit) => hit || caches.match("index.html"))),
     );
     return;
   }
