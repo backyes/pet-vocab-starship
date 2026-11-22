@@ -1,4 +1,4 @@
-const VERSION = "pet-starship-v7";
+const VERSION = "pet-starship-v8";
 const SHELL = [
   "./",
   "index.html",

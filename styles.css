@@ -251,6 +251,30 @@ h3 { font-family: var(--display); font-size: 22px; letter-spacing: 0.04em; margi
 .mode-card.small { margin: 0; padding: 14px; display: block; min-height: 82px; }
 .mode-card.small i { position: absolute; right: 12px; top: 10px; font-style: normal; font-family: var(--display); font-size: 18px; color: var(--dim); opacity: 0.5; }
 .mode-card.small.wide { grid-column: 1 / -1; min-height: 64px; display: flex; align-items: center; }
+
+/* 词花令卡牌游戏入口 */
+.ink-entry {
+  margin-top: 10px; border-color: rgba(200, 160, 110, 0.42);
+  background: linear-gradient(110deg, #f4e9d1, #e8d7b3);
+  box-shadow: inset 0 0 0 4px rgba(255, 252, 244, 0.35);
+}
+.ink-entry:hover {
+  background: linear-gradient(110deg, #f9efdb, #efe1c3);
+  border-color: #b23a2c;
+}
+.ink-entry::after { display: none; }
+.ink-entry .mode-copy b { color: #2a2318; letter-spacing: 0.06em; }
+.ink-entry .mode-copy span { color: #7d6a4c; }
+.ink-entry .mode-go { color: #b23a2c; letter-spacing: 0.12em; }
+.ink-seal {
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 4px; font-size: 19px; opacity: 1; letter-spacing: 0;
+  background: linear-gradient(150deg, #c24632, #a63226 60%, #8b2b20);
+  color: #fbf2df;
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 226, 0.5), 0 6px 12px -8px rgba(90, 30, 18, 0.9);
+  transform: rotate(-2deg);
+}
+
 .next-reward { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .reward-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 12px var(--warn); flex: 0 0 auto; }
 .next-reward div { flex: 1; }

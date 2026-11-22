@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="theme-color" content="#efe4cc" />
+<meta name="description" content="词花令 · PET 词笺掌风拍卡：水墨国风卡牌，按住蓄力、松手落掌，在宣纸卷轴上拍走正确的 PET 单词。" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>词花令 · PET 词笺掌风拍卡</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%23b23a2c'/%3E%3Crect x='5' y='5' width='54' height='54' rx='4' fill='none' stroke='%23f7edda' stroke-width='2'/%3E%3Ctext x='32' y='45' font-size='38' font-family='serif' text-anchor='middle' fill='%23f7edda'%3E词%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<!-- ══════════════ SVG 图形库 ══════════════ -->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- 掌印 -->
+    <symbol id="i-palm" viewBox="0 0 100 100">
+      <g fill="currentColor">
+        <ellipse cx="50" cy="66" rx="25" ry="27" />
+        <rect x="33" y="20" width="11" height="34" rx="5.5" transform="rotate(-9 38.5 37)" />
+        <rect x="44" y="12" width="11" height="42" rx="5.5" transform="rotate(-2 49.5 33)" />
+        <rect x="55" y="14" width="11" height="40" rx="5.5" transform="rotate(4 60.5 34)" />
+        <rect x="66" y="22" width="10" height="32" rx="5" transform="rotate(11 71 38)" />
+        <rect x="16" y="48" width="10" height="26" rx="5" transform="rotate(-58 21 61)" />
+      </g>
+    </symbol>
+    <!-- 竹 -->
+    <symbol id="i-bamboo" viewBox="0 0 120 640">
+      <g stroke="currentColor" fill="none" stroke-linecap="round">
+        <path d="M42 640 C36 540 44 470 38 380 C33 300 42 230 36 150" stroke-width="7" />
+        <path d="M74 640 C70 560 78 500 72 430 C67 360 74 300 70 240" stroke-width="5" opacity=".75" />
+        <path d="M38 470 C48 458 52 452 56 446" stroke-width="4" />
+        <path d="M36 344 C26 332 22 327 18 320" stroke-width="4" opacity=".8" />
+      </g>
+      <g fill="currentColor" opacity=".9">
+        <path d="M40 260 C20 240 4 238 0 226 C18 226 34 232 44 246 Z" />
+        <path d="M40 262 C56 236 74 226 92 220 C86 238 70 252 46 268 Z" />
+        <path d="M42 190 C24 172 10 170 6 160 C24 160 36 166 46 178 Z" />
+        <path d="M44 120 C62 100 80 94 96 92 C86 110 68 120 48 126 Z" />
+      </g>
+    </symbol>
+    <!-- 梅花 -->
+    <symbol id="i-plum" viewBox="0 0 100 100">
+      <g fill="currentColor">
+        <circle cx="50" cy="24" r="15" /><circle cx="75" cy="45" r="15" />
+        <circle cx="66" cy="74" r="15" /><circle cx="34" cy="74" r="15" />
+        <circle cx="25" cy="45" r="15" />
+      </g>
+      <circle cx="50" cy="50" r="9" fill="#f6ecd8" />
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ══════════════ 背景山水 ══════════════ -->
+<div class="scene" aria-hidden="true">
+  <div class="scene-sun"></div>
+  <div class="scene-clouds"></div>
+  <svg class="scene-mountains" viewBox="0 0 1440 560" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="mtn-far" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#7c8b86" stop-opacity=".42" />
+        <stop offset="1" stop-color="#7c8b86" stop-opacity=".04" />
+      </linearGradient>
+      <linearGradient id="mtn-mid" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#5c6b66" stop-opacity=".5" />
+        <stop offset="1" stop-color="#5c6b66" stop-opacity=".06" />
+      </linearGradient>
+      <linearGradient id="mtn-near" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#3c4a45" stop-opacity=".5" />
+        <stop offset="1" stop-color="#3c4a45" stop-opacity=".12" />
+      </linearGradient>
+    </defs>
+    <path class="m-far" fill="url(#mtn-far)" d="M0,318 C150,236 238,286 352,250 C486,208 566,272 690,232 C822,190 918,262 1046,226 C1188,186 1318,258 1440,222 L1440,560 L0,560 Z" />
+    <path class="m-mid" fill="url(#mtn-mid)" d="M0,398 C128,338 246,382 376,346 C520,306 636,362 772,330 C916,296 1030,352 1160,322 C1278,294 1360,330 1440,312 L1440,560 L0,560 Z" />
+    <path class="m-near" fill="url(#mtn-near)" d="M0,470 C176,428 306,462 470,438 C636,414 748,456 902,430 C1058,404 1188,444 1310,422 C1362,412 1404,420 1440,412 L1440,560 L0,560 Z" />
+  </svg>
+  <div class="scene-bamboo left"><svg viewBox="0 0 120 640" width="100%" height="100%" aria-hidden="true"><use href="#i-bamboo" /></svg></div>
+  <div class="scene-bamboo right"><svg viewBox="0 0 120 640" width="100%" height="100%" aria-hidden="true"><use href="#i-bamboo" /></svg></div>
+  <div class="scene-grain"></div>
+  <div class="scene-vignette"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+</div>
+
+<!-- ══════════════ 顶栏 ══════════════ -->
+<header class="topbar" id="topbar">
+  <a class="brand" href="../" title="回到词汇星舰">
+    <span class="seal seal-brand">詞</span>
+    <div class="brand-text">
+      <b>词花令</b>
+      <i>PET 词笺 · 掌风拍卡</i>
+    </div>
+  </a>
+  <nav class="top-actions">
+    <button class="ghost-btn" data-act="rules"><span>玩法</span></button>
+    <button class="ghost-btn" id="btn-sound" data-act="sound" aria-label="音效开关"><span>鸣</span></button>
+  </nav>
+</header>
+
+<!-- ══════════════ 开卷 ══════════════ -->
+<main id="screen-home" class="screen home">
+  <section class="hero">
+    <p class="hero-eyebrow">一卷宣纸 · 十二词域 · 一局花令</p>
+    <h1 class="hero-title">
+      <span class="t-ink">词</span><span class="t-ink">花</span><span class="t-ink">令</span>
+      <span class="hero-seal">拍</span>
+    </h1>
+    <p class="hero-sub">案上摊开<em>词笺</em>，看题签、运掌风。按住卡面蓄力，松手落掌——翻开的那张，就是你要收进词袋的字。</p>
+    <div class="hero-stats">
+      <div><b id="st-games">0</b><span>已对局</span></div>
+      <div><b id="st-wins">0</b><span>胜局</span></div>
+      <div><b id="st-combo">0</b><span>最高连击</span></div>
+      <div><b id="st-wrong">0</b><span>错词待温</span></div>
+    </div>
+  </section>
+
+  <section class="setup">
+    <div class="setup-block">
+      <div class="setup-head">
+        <h2>一、选词域</h2>
+        <span class="setup-note">每个词域只出该主题的 PET 新增词</span>
+      </div>
+      <div class="theme-list" id="theme-list" role="radiogroup" aria-label="词域选择"></div>
+    </div>
+
+    <div class="setup-block">
+      <div class="setup-head">
+        <h2>二、择对手</h2>
+        <span class="setup-note">对手越强，题签越刁钻</span>
+      </div>
+      <div class="diff-list" id="diff-list" role="radiogroup" aria-label="难度选择"></div>
+      <label class="ket-row">
+        <input type="checkbox" id="opt-ket" />
+        <span class="ket-box" aria-hidden="true"></span>
+        <span class="ket-text"><b>兼收 KET 基础词</b><i>给低年级先热身，词量约翻倍</i></span>
+      </label>
+    </div>
+
+    <div class="setup-start">
+      <button id="btn-start" class="ink-btn primary">
+        <span class="ink-btn-zh">落 掌 开 局</span>
+        <span class="ink-btn-en">START</span>
+      </button>
+      <p class="setup-tip" id="setup-tip">十二词域 · 1,503 张词笺 · 掌风三式</p>
+    </div>
+  </section>
+</main>
+
+<!-- ══════════════ 对局 ══════════════ -->
+<main id="screen-play" class="screen play hidden">
+  <div class="duel">
+    <div class="duelist me" id="duel-me">
+      <span class="seal seal-avatar">童</span>
+      <div class="duelist-info">
+        <b>你</b>
+        <span class="duelist-score" id="p-score">0</span>
+      </div>
+      <div class="combo-badge" id="p-combo"><i>连</i><b>0</b></div>
+    </div>
+
+    <div class="duel-mid">
+      <div class="duel-round" id="round-label">第 1 手</div>
+      <div class="duel-track"><i id="duel-fill"></i></div>
+      <div class="duel-turns" id="duel-turns"></div>
+    </div>
+
+    <div class="duelist rival" id="duel-ai">
+      <div class="combo-badge" id="ai-combo"><i>连</i><b>0</b></div>
+      <div class="duelist-info right">
+        <b>墨掌柜</b>
+        <span class="duelist-score" id="ai-score">0</span>
+      </div>
+      <span class="seal seal-avatar dark">墨</span>
+    </div>
+  </div>
+
+  <div class="challenge" id="challenge">
+    <div class="challenge-tab"><span>题</span><span>签</span></div>
+    <div class="challenge-body">
+      <div class="challenge-meta">
+        <span class="challenge-kind" id="ch-kind">释 义</span>
+        <span class="challenge-pos" id="ch-pos">n.</span>
+        <span class="flower-chip hidden" id="flower-chip">✿ 花令 · 双倍</span>
+        <span class="ch-clock hidden" id="ch-clock">10</span>
+      </div>
+      <div class="challenge-main" id="ch-main" aria-live="polite">—</div>
+      <div class="challenge-extra" id="ch-extra"></div>
+    </div>
+    <div class="challenge-side">
+      <button class="round-btn" id="btn-hear" title="听发音">听音</button>
+      <button class="round-btn" id="btn-hint" title="指点正确答案">指点 <b id="hint-count">3</b></button>
+    </div>
+    <div class="challenge-timer" id="ch-timer"><i id="timer-bar"></i></div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="scroll-rod left"><i></i></div>
+    <div class="board" id="board">
+      <div class="field" id="field"></div>
+      <div class="board-hint" id="board-hint">
+        <span class="hint-line"></span>
+        <span>按住卡面蓄力 · 松手落掌 · 数字键 1–8 亦可</span>
+        <span class="hint-line"></span>
+      </div>
+    </div>
+    <div class="scroll-rod right"><i></i></div>
+  </div>
+
+  <div class="commentary" id="commentary" aria-live="polite">
+    <span class="commentary-seal" id="cm-seal">批</span>
+    <div class="commentary-body">
+      <div class="commentary-head">
+        <b id="cm-word">—</b>
+        <span id="cm-zh"></span>
+        <button class="tiny-btn" id="btn-speak" title="朗读">♪</button>
+      </div>
+      <p id="cm-ex"></p>
+    </div>
+  </div>
+
+  <div class="footbar">
+    <button class="link-btn" id="btn-rules">玩法</button>
+    <span class="footbar-tip" id="footbar-tip">掌法：轻掌 ×1 · 妙手 ×2 · 过力 ×0.5</span>
+    <button class="link-btn danger" id="btn-giveup">收 局</button>
+  </div>
+</main>
+
+<!-- ══════════════ 结算卷轴 ══════════════ -->
+<div class="overlay hidden" id="overlay-result">
+  <div class="scroll-panel result-panel" role="dialog" aria-modal="true" aria-label="对局结算">
+    <div class="panel-rod top"></div>
+    <div class="panel-body">
+      <p class="result-eyebrow" id="res-eyebrow">花令终局</p>
+      <h2 class="result-title" id="res-title">技高一筹</h2>
+      <p class="result-sub" id="res-sub">你以 380 : 240 收下这一局</p>
+      <div class="result-grid" id="res-grid"></div>
+      <div class="result-words">
+        <div class="result-words-head"><span>本局词笺</span><i id="res-word-count"></i></div>
+        <div class="word-chip-list" id="res-words"></div>
+      </div>
+      <div class="result-actions">
+        <button class="ink-btn primary small" id="btn-again">再 来 一 局</button>
+        <button class="ink-btn ghost small" id="btn-home">回 到 开 卷</button>
+      </div>
+    </div>
+    <div class="panel-rod bottom"></div>
+  </div>
+</div>
+
+<!-- ══════════════ 玩法卷轴 ══════════════ -->
+<div class="overlay hidden" id="overlay-rules">
+  <div class="scroll-panel rules-panel" role="dialog" aria-modal="true" aria-label="玩法说明">
+    <div class="panel-rod top"></div>
+    <div class="panel-body">
+      <div class="rules-head">
+        <span class="seal seal-mid">令</span>
+        <div>
+          <h2>词花令 · 玩法</h2>
+          <p>给孩子的 PET 词笺拍卡局</p>
+        </div>
+      </div>
+      <div class="rules-grid">
+        <div class="rule">
+          <b>① 看题签</b>
+          <p>题签给出<em>中文释义</em>、<em>例句挖空</em>或<em>读音</em>，案上每一张词笺都是一张英文单词卡。</p>
+        </div>
+        <div class="rule">
+          <b>② 运掌风</b>
+          <p>按住你要拍的卡，掌心出现<em>蓄力环</em>。松手即为落掌，卡笺被掌风翻面。</p>
+        </div>
+        <div class="rule">
+          <b>③ 分掌法</b>
+          <p>环上<em>金色弧段</em>是「妙手」：落在此处得分 ×2；轻掌 ×1；蓄力过满则「过力」只记 ×0.5。</p>
+        </div>
+        <div class="rule">
+          <b>④ 收词笺</b>
+          <p>拍中正确词笺，词笺翻面显出释义与例句，收进你的词袋并计分；拍错则该笺归墨掌柜，倒扣 30 分。</p>
+        </div>
+        <div class="rule">
+          <b>⑤ 花令</b>
+          <p>每逢双数手，你的回合会开出<em>花令</em>：该手分数双倍。书生档限时 10 秒、状元档 8 秒。连击越高，倍率越高。</p>
+        </div>
+        <div class="rule">
+          <b>⑥ 终局</b>
+          <p>双方各拍相同手数，分数高者胜。错过的词会进「错词簿」，下次优先出现。</p>
+        </div>
+      </div>
+      <p class="rules-foot">所有词句、释义、录音均来自本项目 PET 词库（Cambridge B1 Preliminary 词表 + Turtle Bay 词卡）。</p>
+      <div class="result-actions">
+        <button class="ink-btn primary small" id="btn-rules-close">晓 得 了</button>
+      </div>
+    </div>
+    <div class="panel-rod bottom"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="flower-burst" id="flower-burst" aria-hidden="true"></div>
+
+
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
