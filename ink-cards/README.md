@@ -4,6 +4,8 @@
 
 国风水墨 + 宣纸卷轴 + 朱砂印章 + 五声音阶；一局 3–6 分钟，可手机触屏玩。
 
+**在线试玩**：<https://backyes.github.io/pet-vocab-starship/ink-cards/>
+
 ![开卷](docs/preview-home.png)
 
 ![对局](docs/preview-play.png)

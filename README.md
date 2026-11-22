@@ -3,6 +3,9 @@
 一个可以直接在浏览器 / 手机上玩的 **3D PET 词汇闯关游戏**。  
 先进入「记忆实验室」用 **3D 词核 + 语境猜义 + 记忆链路** 学 6 个词，再带着刚学的词进入 **射击识词、听写填空、语境选择、语序重构** 战场；12 个程序化 3D 星域、舰员等级、模块升级和词王 BOSS 串成完整闯关线。
 
+**在线试玩**：<https://backyes.github.io/pet-vocab-starship/>  
+**卡牌小游戏「词花令」**：<https://backyes.github.io/pet-vocab-starship/ink-cards/>
+
 ![基地界面](docs/preview-home.png)
 
 ![记忆实验室](docs/preview-learn.png)

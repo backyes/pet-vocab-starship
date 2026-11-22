@@ -49,15 +49,20 @@ git push -u origin main
 4. 点 **Save**
 5. 等 1–3 分钟
 
-访问地址：
+访问地址（以本仓库 `backyes/pet-vocab-starship` 为例）：
 
-- 仓库名不是 `<用户名>.github.io` 时：`https://<用户名>.github.io/<仓库名>/`
-- 仓库名正好是 `<用户名>.github.io` 时：`https://<用户名>.github.io/`
+- 星舰主站：<https://backyes.github.io/pet-vocab-starship/>
+- 词花令卡牌小游戏：<https://backyes.github.io/pet-vocab-starship/ink-cards/>
+
+仓库名不是 `<用户名>.github.io` 时是 `https://<用户名>.github.io/<仓库名>/`；正好是 `<用户名>.github.io` 时是 `https://<用户名>.github.io/`。
+
+`ink-cards/` 是仓库里的子目录，同样由这一次 Pages 构建发布，**不需要单独建仓库或再开一次 Pages**。之后每次 `git push origin main`，1–3 分钟内自动重新构建。
 
 ## 四、发布后检查
 
 - 首页能进入，点「启动星舰」后能开始游戏
-- 进入听写舱，能听到发音
+- 点作战终端底部的「词花令 · 水墨拍卡」，能进入 `/ink-cards/` 并开始拍卡
+- 进入听写舱，能听到发音；卡牌局里拍中词笺能听到单词英音
 - 手机 Safari/Chrome 打开同一 URL，能触屏选目标
 - iPhone「添加到主屏幕」/ Android「安装应用」可用（Pages 是 HTTPS，PWA 和 Service Worker 正常）
 - 如果修改了 `sw.js` 的缓存版本，记得把 `VERSION` 加一，避免旧缓存
